@@ -91,9 +91,11 @@ function Rule:follow()
 					end
 
 					-- recalculate follow set
-					if option[i] ~= self then
+					if not option[i].recalculating then
 						option[i].follow_set = nil
+						option[i].recalculating = true
 						option[i]:follow()
+						option[i].recalculating = false
 					end
 				end
 
