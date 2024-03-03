@@ -64,7 +64,7 @@ function Rule:follow()
 	while changed do
 		changed = false
 
-		for _, option in pairs(self.options) do
+		for _, option in ipairs(self.options) do
 			local nullable = true
 			local quitloop = false
 			local i = #option
@@ -110,6 +110,81 @@ function Rule:follow()
 
 	self.follow_set = self.calc_follow_set
 	return self.follow_set
+end
+
+function Rule:parse(tokens, is_self)
+	-- make a shallow copy of the tokens
+	-- should only consist of strings anyway
+	tokens = { unpack(tokens) }
+
+	local found = false
+	for first_token, _ in pairs(self:first()) do
+		if tokens[1] == first_token then
+			found = true
+		end
+	end
+
+	if not found then
+		return nil
+	end
+
+	for _, option in ipairs(self.options) do
+		local match = true
+		local consumed_count = 0
+		local result = { type = self }
+		local tokens_copy = { unpack(tokens) }
+		for _, required_token in ipairs(option) do
+			if match then
+				if getmetatable(required_token) == Rule then
+					if is_self and required_token == self then
+						match = false
+					else
+						local inner_result, inner_consumed_count = required_token:parse({ unpack(tokens_copy) }, required_token == self, previous)
+	
+						if inner_result then
+							table.insert(result, inner_result)
+							consumed_count = consumed_count + inner_consumed_count
+							for _ = 1, inner_consumed_count do
+								table.remove(tokens_copy, 1)
+							end
+						else
+							match = false
+						end
+					end
+				elseif tokens_copy[1] == required_token then
+					table.insert(result, table.remove(tokens_copy, 1))
+					consumed_count = consumed_count + 1
+				else
+					match = false
+				end
+			end
+		end
+
+		if match then
+			return result, consumed_count
+		end
+	end
+
+	return nil
+end
+
+local random = love and love.math.random or math.random
+function Rule:generate()
+	local result = {}
+	local option = self.options[random(1, #self.options)]
+
+	for _, token in ipairs(option) do
+		if getmetatable(token) == Rule then
+			local inner_result = token:generate()
+			for _, inner_token in ipairs(inner_result) do
+				table.insert(result, inner_token)
+			end
+		else
+			table.insert(result, token)
+		end
+	end
+
+	return result
 end
 
 function Rule:option(...)
