@@ -139,7 +139,7 @@ function Rule:parse(tokens, is_self)
 					if is_self and required_token == self then
 						match = false
 					else
-						local inner_result, inner_consumed_count = required_token:parse({ unpack(tokens_copy) }, required_token == self, previous)
+						local inner_result, inner_consumed_count = required_token:parse({ unpack(tokens_copy) }, required_token == self)
 	
 						if inner_result then
 							table.insert(result, inner_result)
